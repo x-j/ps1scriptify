@@ -21,3 +21,4 @@ Example:
 Will create a file named Foo.ps1 in folder C:\bar.
 
 Fun fact: you can test this script by running it on itself!
+
