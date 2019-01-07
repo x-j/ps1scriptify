@@ -144,6 +144,7 @@ class PS1Script:
         fun.append_line("\n\tpython $script $params\n\n}")
 
         self.append_function(fun)
+        self.append_line(fun_name)
 
     def append_comment(self, comment):
         self.append_line(f"# {comment}")
