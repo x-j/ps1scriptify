@@ -2,6 +2,7 @@
 
 Python script that creates a Powershell function used for calling a Python script.
 Easy as pie to understand.
+CURRENTLY ONLY WORKSON WINDOWS AND WITH PYTHON3.
 
 usage:
 >python ps1scriptify.py [Python file here]
