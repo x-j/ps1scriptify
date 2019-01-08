@@ -8,9 +8,8 @@ from pathlib import Path
 # below is just for debugging, ignore please:
 # load default scripts folder path from config file (if it doesn't exist, just use cwd)
 try:
-    config_tree = ETree.parse(f"{Path(__file__).parent.absolute()}\\config.xml")
-    scripts_path = config_tree.find("DefaultScriptFolder").text
-    PS1_SCRIPT_FOLDER = Path(scripts_path)
+    config_tree = ETree.parse(Path.joinpath(Path(__file__).parent.absolute(), 'config.xml'))
+    PS1_SCRIPT_FOLDER = Path(config_tree.find("DefaultScriptFolder").text)
 except FileNotFoundError:
     PS1_SCRIPT_FOLDER = Path.cwd()
 
@@ -127,11 +126,13 @@ class PS1Script:
                     param = FunctionParameter(param_name, param_type, i - read_start)
                 fun.add_parameter(param)
 
+        fun.add_parameter(FunctionParameter("h","switch")) # add an optional help parameter
+
         fun.append_line(f"\t$script = '{py_file}'\n")
         fun.append_line(f"\t$params = @()\n")
 
         for param in fun.parameters:
-            fun.append_line('\tif($'+param.name+'){')
+            fun.append_line('\tif($' + param.name + '){')
             if param.position == -1:
                 fun.append_line(f'\t\t$params += "-{param.name}"')
             if param.type == "string":
@@ -205,10 +206,10 @@ class Function(PS1Script):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Turns a Python script into a PS script.')
     parser.add_argument('pyfile', type=str, help='.py file with your script')
-    parser.add_argument('-dest', '--Destination', dest='destination',
+    parser.add_argument('-dest', dest='destination',
                         help="Folder in which the PS script will be saved.", required=False)
     parser.add_argument("-f", "--Force", action="store_true",
-                        help="Set this file to overwrite the PS script if it already exists.",
+                        help="Set this to overwrite the PS script if it already exists.",
                         required=False, dest='force')
 
     args = parser.parse_args()
@@ -219,9 +220,9 @@ if __name__ == '__main__':
 
     try:
         script = PS1Script.from_py(py_file)
-        script_name = py_file.name[:-3].title().replace('_', '-')  # .title and sub to make the function follow PS naming convention
-        script_name = (str(PS1_SCRIPT_FOLDER) + "\\") + script_name
-        script.create_file(Path(script_name + ".ps1"), force=force)
+        script_name = py_file.name[:-3].title().replace('_', '-')  # .title and sub to follow PS naming convention
+        script_path = Path.joinpath((PS1_SCRIPT_FOLDER), script_name + '.ps1')
+        script.create_file(Path(script_path), force=force)
     except Exception as e:
         if hasattr(e, 'message'):
             print(e.message)
