@@ -5,7 +5,6 @@ from pathlib import Path
 
 # region debugging
 
-# below is just for debugging, ignore please:
 # load default scripts folder path from config file (if it doesn't exist, just use cwd)
 try:
     config_tree = ETree.parse(Path.joinpath(Path(__file__).parent.absolute(), 'config.xml'))
@@ -64,10 +63,14 @@ class PS1Script:
             raise FileNotFoundError(f"File does not exist: {py_file}")
         elif not py_file.name.endswith(".py"):
             raise Exception("Provided file is not a valid Python script file.")
-        if "if __name__ == '__main__':" not in py_file.open().read():  # HARDCORE REFLECTION
-            raise Exception("Provided Python script is not callable (does not contain a main block)")
 
-        lines = py_file.open().readlines()
+        with py_file.open() as file:
+            as_text = file.read()
+            # HARDCORE REFLECTION
+            if not ("if __name__ == '__main__':" in as_text or 'if __name__ == "__main__":' in as_text):
+                raise Exception("Provided Python script is not callable (does not contain a main block)")
+
+        as_lines = as_text.split('\n')
 
         fun_name = py_file.name[:-3].title().replace('_', '-')
 
@@ -75,7 +78,7 @@ class PS1Script:
         # first we'll look for a declaration of an ArgumentParser
         read_start = 0
 
-        for i, line in enumerate(lines):
+        for i, line in enumerate(as_lines):
             # look for an ArgumentParser object
             argparser_pattern = r'[^"]*=.*ArgumentParser\(.*\)'
             if re.search(argparser_pattern, line):
@@ -97,8 +100,8 @@ class PS1Script:
         fun = Function(fun_name)
 
         # look for params for fun :)
-        for i in range(read_start, len(lines)):
-            line = lines[i]
+        for i in range(read_start, len(as_lines)):
+            line = as_lines[i]
             argument_pattern = r'\.add_argument'
             if re.search(argument_pattern, line):
                 values = line[line.find('('):line.find(')')].split(',')
@@ -119,14 +122,15 @@ class PS1Script:
                         param_type = "switch"
                         break
                 else:
-                    param_type = "switch"
+                    param_type = "string"
+
                 if '-' in values[0]:
                     param = FunctionParameter(param_name, param_type)
                 else:
                     param = FunctionParameter(param_name, param_type, i - read_start)
                 fun.add_parameter(param)
 
-        fun.add_parameter(FunctionParameter("h","switch")) # add an optional help parameter
+        fun.add_parameter(FunctionParameter("h", "switch"))  # add an optional help parameter
 
         fun.append_line(f"\t$script = '{py_file}'\n")
         fun.append_line(f"\t$params = @()\n")
@@ -221,7 +225,7 @@ if __name__ == '__main__':
     try:
         script = PS1Script.from_py(py_file)
         script_name = py_file.name[:-3].title().replace('_', '-')  # .title and sub to follow PS naming convention
-        script_path = Path.joinpath((PS1_SCRIPT_FOLDER), script_name + '.ps1')
+        script_path = Path.joinpath(PS1_SCRIPT_FOLDER, script_name + '.ps1')
         script.create_file(Path(script_path), force=force)
     except Exception as e:
         if hasattr(e, 'message'):
