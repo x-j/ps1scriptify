@@ -68,7 +68,7 @@ class PS1Script:
             as_text = file.read()
             # HARDCORE REFLECTION
             if not ("if __name__ == '__main__':" in as_text or 'if __name__ == "__main__":' in as_text):
-                raise Exception("Provided Python script is not callable (does not contain a main block)")
+                raise Exception("Provided Python script is not callable (does not   contain a main block)")
 
         as_lines = as_text.split('\n')
 
@@ -99,6 +99,8 @@ class PS1Script:
         # declare Function object
         fun = Function(fun_name)
 
+        param_counter = 0
+
         # look for params for fun :)
         for i in range(read_start, len(as_lines)):
             line = as_lines[i]
@@ -106,6 +108,7 @@ class PS1Script:
             if re.search(argument_pattern, line):
                 values = line[line.find('('):line.find(')')].split(',')
                 param_name = re.search(r"([a-z]|[A-Z])+", values[0]).group()
+                param_rawname = re.search(r"-*([a-z]|[A-Z])+", values[0]).group()
 
                 # determine type using magic
                 for valuu in values:
@@ -125,21 +128,23 @@ class PS1Script:
                     param_type = "string"
 
                 if '-' in values[0]:
-                    param = FunctionParameter(param_name, param_type)
+                    param = FunctionParameter(param_name, param_type, param_rawname)
                 else:
-                    param = FunctionParameter(param_name, param_type, i - read_start)
+                    param = FunctionParameter(param_name, param_type, param_rawname, param_counter)
+                    param_counter += 1
                 fun.add_parameter(param)
 
-        fun.add_parameter(FunctionParameter("h", "switch"))  # add an optional help parameter
+        fun.add_parameter(FunctionParameter("h", "switch", '-h'))  # add an optional help parameter
 
         fun.append_line(f"\t$script = '{py_file}'\n")
         fun.append_line(f"\t$params = @()\n")
 
+        param: FunctionParameter
         for param in fun.parameters:
             fun.append_line('\tif($' + param.name + '){')
-            if param.position == -1:
-                fun.append_line(f'\t\t$params += "-{param.name}"')
-            if param.type == "string":
+            if param.type == "switch":
+                fun.append_line(f'\t\t$params += "{param.rawname}"')
+            elif param.type == "string":
                 fun.append_line(f'\t\t$params += ${param.name}')
             elif param.type == "int":
                 fun.append_line(f'\t\t$params += ${param.name}')
@@ -165,10 +170,11 @@ class PS1Script:
 
 
 class FunctionParameter:
-    def __init__(self, name, p_type, position=-1):
+    def __init__(self, name, p_type, rawname, position=-1):
         self.name = name
         self.type = p_type
         self.position = position  # if position is -1 then it's not positional
+        self.rawname = rawname
 
     @property
     def text(self):
