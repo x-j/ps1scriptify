@@ -1,9 +1,10 @@
 # ps1scriptify
 
-Python script that creates a Powershell function used for calling a Python script.
-Easy as pie to understand.
+Python script that creates a Powershell function wrapped around an executable Python script. Easy as pie to understand.
 
-CURRENTLY ONLY WORKS ON WINDOWS AND WITH PYTHON3.
+If your Python script has a main block and uses an ArgumentParser then you can __ps1scriptify__ it! This is done by snakingly parsing your .py file using regex and the result is a .ps1 file containing a function that _should_ take the same arguments as your script. This Powershell function calls your .py file, so you can use it straight from terminal.
+
+CURRENTLY AND FOR THE FORSEEABLE FUTURE ONLY WORKS ON WINDOWS AND WITH PYTHON3.
 
 usage:
 >python ps1scriptify.py [Python file here]
