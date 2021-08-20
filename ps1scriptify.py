@@ -67,8 +67,8 @@ class PS1Script:
         with py_file.open() as file:
             as_text = file.read()
             # HARDCORE REFLECTION
-            if not ("if __name__ == '__main__':" in as_text or 'if __name__ == "__main__":' in as_text):
-                raise Exception("Provided Python script is not callable (does not   contain a main block)")
+            if re.search(r"if *__name__ *== *['\"]__main__['\"] *:", as_text) is None:
+                raise Exception("Provided Python script does not contain a main block")
 
         as_lines = as_text.split('\n')
 
@@ -214,7 +214,7 @@ class Function(PS1Script):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Turns a Python script into a PS script.')
+    parser = argparse.ArgumentParser(description='Wraps a Powershell function around a Python script. Outputs a PS1 file ')
     parser.add_argument('pyfile', type=str, help='.py file with your script')
     parser.add_argument('-dest', dest='destination',
                         help="Folder in which the PS script will be saved.", required=False)
