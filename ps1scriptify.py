@@ -8,15 +8,21 @@ from pathlib import Path
 # load default scripts folder path from config file (if it doesn't exist, just use cwd)
 try:
     config_tree = ETree.parse(Path.joinpath(Path(__file__).parent.absolute(), 'config.xml'))
-    PS1_SCRIPT_FOLDER = Path(config_tree.find("DefaultScriptFolder").text)
+    out_dir = Path(config_tree.find("DefaultScriptFolder").text)
 except FileNotFoundError:
-    PS1_SCRIPT_FOLDER = Path.cwd()
-
-ARBITRARY_NUMBER = 100
-
+    out_dir = Path.cwd()
 
 # endregion
 
+
+# region regexi
+
+MAIN_BLOCK_PATTERN = re.compile(r"if *__name__ *== *['\"]__main__['\"] *:")
+ARGPARSER_PATTERN = re.compile(r'[^"]*=.*ArgumentParser\(.*\)')
+OPTPARSER_PATTERN = re.compile(r'(optparse\.)?OptionParser')
+DOCOPT_PATTERN = re.compile(r'docopt')
+
+# endregion
 
 class PS1Script:
 
@@ -63,12 +69,19 @@ class PS1Script:
             raise FileNotFoundError(f"File does not exist: {py_file}")
         elif not py_file.name.endswith(".py"):
             raise Exception("Provided file is not a valid Python script file.")
-
+        
         with py_file.open() as file:
             as_text = file.read()
-            # HARDCORE REFLECTION
-            if re.search(r"if *__name__ *== *['\"]__main__['\"] *:", as_text) is None:
+            # sitting down with a glass of wine; reflection
+            if re.search(MAIN_BLOCK_PATTERN, as_text) is None:
                 raise Exception("Provided Python script does not contain a main block")
+            if re.search(OPTPARSER_PATTERN, as_text):
+                raise NotImplementedError("Optparser is not supported yet.")
+            if re.search(DOCOPT_PATTERN, as_text):
+                raise NotImplementedError("Docopt is not supported yet.")
+            s = re.search(ARGPARSER_PATTERN, as_text)
+            if s is None:
+                raise Exception("Did not find an ArgumentParser in the provided file.")
 
         as_lines = as_text.split('\n')
 
@@ -80,8 +93,7 @@ class PS1Script:
 
         for i, line in enumerate(as_lines):
             # look for an ArgumentParser object
-            argparser_pattern = r'[^"]*=.*ArgumentParser\(.*\)'
-            if re.search(argparser_pattern, line):
+            if re.search(ARGPARSER_PATTERN, line):
                 read_start = i + 1
 
                 # we also get its description and put it as a comment in the Script
@@ -225,13 +237,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
     py_file = Path(vars(args)["pyfile"]).absolute()
     if vars(args)['destination'] is not None:
-        PS1_SCRIPT_FOLDER = Path(vars(args)['destination']).absolute()
+        out_dir = Path(vars(args)['destination']).absolute()
     force = vars(args)['force']
 
     try:
         script = PS1Script.from_py(py_file)
         script_name = py_file.name[:-3].title().replace('_', '-')  # .title and sub to follow PS naming convention
-        script_path = Path.joinpath(PS1_SCRIPT_FOLDER, script_name + '.ps1')
+        script_path = Path.joinpath(out_dir, script_name + '.ps1')
         script.create_file(Path(script_path), force=force)
     except Exception as e:
         if hasattr(e, 'message'):
@@ -243,4 +255,4 @@ if __name__ == '__main__':
         else:
             exit(1)
     else:
-        print(f"Done. Created file {script.path.name} in {PS1_SCRIPT_FOLDER}")
+        print(f"Done. Created file {script.path.name} in {out_dir}")
