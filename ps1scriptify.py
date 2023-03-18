@@ -17,8 +17,9 @@ except FileNotFoundError:
 
 # region regexi
 
+REFLECTOR_PATTERN = re.compile("# if position is -1 then it's not positional")
 MAIN_BLOCK_PATTERN = re.compile(r"if *__name__ *== *['\"]__main__['\"] *:")
-ARGPARSER_PATTERN = re.compile(r'[^"]*=.*ArgumentParser\(.*\)')
+ARGPARSER_PATTERN = re.compile(r'[^"]*=.*ArgumentParser\(.*\)?')
 OPTPARSER_PATTERN = re.compile(r'(optparse\.)?OptionParser')
 DOCOPT_PATTERN = re.compile(r'docopt')
 
@@ -73,12 +74,13 @@ class PS1Script:
         with py_file.open() as file:
             as_text = file.read()
             # sitting down with a glass of wine; reflection
-            if re.search(MAIN_BLOCK_PATTERN, as_text) is None:
-                raise Exception("Provided Python script does not contain a main block")
-            if re.search(OPTPARSER_PATTERN, as_text):
-                raise NotImplementedError("Optparser is not supported yet.")
-            if re.search(DOCOPT_PATTERN, as_text):
-                raise NotImplementedError("Docopt is not supported yet.")
+            if re.search(REFLECTOR_PATTERN, as_text) is None:
+                if re.search(MAIN_BLOCK_PATTERN, as_text) is None:
+                    raise Exception("Provided Python script does not contain a main block")
+                if re.search(OPTPARSER_PATTERN, as_text):
+                    raise NotImplementedError("Optparser is not supported yet.")
+                if re.search(DOCOPT_PATTERN, as_text):
+                    raise NotImplementedError("Docopt is not supported yet.")
             s = re.search(ARGPARSER_PATTERN, as_text)
             if s is None:
                 raise Exception("Did not find an ArgumentParser in the provided file.")
